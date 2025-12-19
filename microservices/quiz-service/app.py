@@ -34,19 +34,27 @@ producer = KafkaProducer(
 def generate_quiz(topic, num_questions=5):
     """Generate quiz questions using Bedrock"""
     try:
-        prompt = f"""Generate {num_questions} multiple choice quiz questions about: {topic}
+        prompt = f"""You are a quiz generator. Create exactly {num_questions} multiple choice questions about "{topic}".
 
-Return ONLY a valid JSON array with this exact format (no other text):
-[{{"question": "What is...?", "options": ["Option A", "Option B", "Option C", "Option D"], "correct": 0}}]
+You MUST respond with ONLY a JSON array, no other text. Format:
+[
+  {{"question": "Question text here?", "options": ["First option", "Second option", "Third option", "Fourth option"], "correct": 0}},
+  {{"question": "Another question?", "options": ["A", "B", "C", "D"], "correct": 1}}
+]
 
-The "correct" field should be the index (0-3) of the correct option.
-Generate educational, clear questions with 4 options each."""
+Rules:
+- Each question must have exactly 4 options
+- "correct" is the index (0, 1, 2, or 3) of the correct answer
+- Do NOT include any text before or after the JSON array
+- Make questions educational and relevant to the topic
+
+Respond with ONLY the JSON array:"""
 
         body = json.dumps({
             "inputText": prompt,
             "textGenerationConfig": {
                 "maxTokenCount": 2000,
-                "temperature": 0.7,
+                "temperature": 0.5,
                 "topP": 0.9
             }
         })
@@ -60,6 +68,8 @@ Generate educational, clear questions with 4 options each."""
         result = json.loads(response['body'].read())
         completion = result.get('results', [{}])[0].get('outputText', '[]')
         
+        logger.info(f"Bedrock response: {completion[:300]}")
+        
         # Parse JSON from response
         try:
             # Find JSON array in the response
@@ -68,10 +78,14 @@ Generate educational, clear questions with 4 options each."""
             if start >= 0 and end > start:
                 json_str = completion[start:end]
                 questions = json.loads(json_str)
+                logger.info(f"Successfully parsed {len(questions)} questions")
                 return questions
-            return []
-        except:
-            logger.error(f"Failed to parse quiz JSON: {completion[:200]}")
+            else:
+                logger.error(f"No JSON array found in response")
+                return []
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {e}")
+            logger.error(f"Attempted to parse: {completion[:500]}")
             return []
         
     except Exception as e:
