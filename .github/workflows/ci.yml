@@ -31,15 +31,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd "cloud project/microservices/${{ matrix.service }}"
+          cd microservices/${{ matrix.service }}
           pip install -r requirements.txt
           pip install pytest
 
       - name: Run unit tests
         continue-on-error: true
         run: |
-          cd "cloud project/microservices/${{ matrix.service }}"
-          python -m pytest test_app.py -v || echo "Tests completed with some failures"
+          cd microservices/${{ matrix.service }}
+          python -m pytest test_app.py -v || echo "Tests completed"
 
   # ==================== BUILD ====================
   build:
@@ -71,7 +71,7 @@ jobs:
         env:
           ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
         run: |
-          cd "cloud project/microservices/${{ matrix.service }}"
+          cd microservices/${{ matrix.service }}
           docker build -t $ECR_REGISTRY/learning-platform/${{ matrix.service }}:${{ github.sha }} .
           docker tag $ECR_REGISTRY/learning-platform/${{ matrix.service }}:${{ github.sha }} \
                      $ECR_REGISTRY/learning-platform/${{ matrix.service }}:latest
