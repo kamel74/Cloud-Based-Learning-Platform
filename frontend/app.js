@@ -29,7 +29,7 @@ async function convertTTS() {
     showLoading();
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/tts/synthesize`, {
+        const response = await fetch(`${API_BASE_URL}/api/tts`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -84,7 +84,7 @@ async function convertSTT() {
         const formData = new FormData();
         formData.append('audio', file);
 
-        const response = await fetch(`${API_BASE_URL}/api/stt/transcribe`, {
+        const response = await fetch(`${API_BASE_URL}/api/stt`, {
             method: 'POST',
             body: formData
         });
@@ -147,7 +147,7 @@ async function sendChat() {
     input.value = '';
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/chat/message`, {
+        const response = await fetch(`${API_BASE_URL}/api/chat`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -192,7 +192,7 @@ async function readDocument() {
         const formData = new FormData();
         formData.append('document', file);
 
-        const response = await fetch(`${API_BASE_URL}/api/documents/analyze`, {
+        const response = await fetch(`${API_BASE_URL}/api/documents/upload`, {
             method: 'POST',
             body: formData
         });

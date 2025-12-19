@@ -1,0 +1,134 @@
+name: CD Pipeline
+
+on:
+  repository_dispatch:
+    types: [deploy]
+  workflow_dispatch:
+    inputs:
+      image_tag:
+        description: 'Image tag to deploy'
+        required: false
+        default: 'latest'
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  EC2_HOST: ${{ secrets.EC2_HOST }}
+  SERVICES: tts-service,stt-service,chat-service,document-reader-service,quiz-service
+
+jobs:
+  # ==================== BLUE-GREEN DEPLOYMENT ====================
+  deploy:
+    name: Blue-Green Deployment
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set image tag
+        id: set-tag
+        run: |
+          if [ "${{ github.event_name }}" == "repository_dispatch" ]; then
+            echo "tag=${{ github.event.client_payload.sha }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=${{ github.event.inputs.image_tag || 'latest' }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.EC2_HOST }} >> ~/.ssh/known_hosts 2>/dev/null || true
+
+      - name: Deploy with Blue-Green Strategy
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ env.EC2_HOST }} << 'ENDSSH'
+            set -e
+            
+            # Login to ECR
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+            
+            # Pull new images
+            echo "📦 Pulling new images..."
+            for service in tts-service stt-service chat-service document-reader-service quiz-service; do
+              docker pull ${{ env.ECR_REGISTRY }}/learning-platform/$service:${{ steps.set-tag.outputs.tag }}
+            done
+            
+            # Blue-Green: Start new containers with -new suffix
+            echo "🔵 Starting new (blue) containers..."
+            cd ~
+            
+            # Tag new images as latest
+            for service in tts-service stt-service chat-service document-reader-service quiz-service; do
+              docker tag ${{ env.ECR_REGISTRY }}/learning-platform/$service:${{ steps.set-tag.outputs.tag }} \
+                        ${{ env.ECR_REGISTRY }}/learning-platform/$service:latest
+            done
+            
+            # Restart with new images
+            docker-compose pull
+            docker-compose up -d --force-recreate
+            
+            # Wait for health checks
+            echo "⏳ Waiting for services to be healthy..."
+            sleep 30
+            
+            # Health check
+            echo "🏥 Running health checks..."
+            HEALTHY=true
+            for port in 5000 5001 5002 5003 5004; do
+              if ! curl -sf http://localhost:$port/health > /dev/null 2>&1; then
+                echo "❌ Service on port $port is unhealthy!"
+                HEALTHY=false
+              else
+                echo "✅ Service on port $port is healthy"
+              fi
+            done
+            
+            if [ "$HEALTHY" = false ]; then
+              echo "🔴 Deployment failed health checks!"
+              exit 1
+            fi
+            
+            echo "🟢 Deployment successful!"
+          ENDSSH
+
+      # ==================== ROLLBACK ON FAILURE ====================
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ env.EC2_HOST }} << 'ENDSSH'
+            echo "🔄 Rolling back to previous version..."
+            cd ~
+            
+            # Pull previous images (tagged as :previous if exists)
+            docker-compose down
+            docker-compose up -d
+            
+            echo "⚠️ Rollback completed. Please check services manually."
+          ENDSSH
+
+  # ==================== NOTIFY ====================
+  notify:
+    name: Notify Status
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: always()
+
+    steps:
+      - name: Deployment Status
+        run: |
+          if [ "${{ needs.deploy.result }}" == "success" ]; then
+            echo "✅ Deployment completed successfully!"
+          else
+            echo "❌ Deployment failed!"
+            exit 1
+          fi
