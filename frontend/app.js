@@ -199,22 +199,42 @@ let currentQuiz = [];
 
 async function generateQuiz() {
     const topic = document.getElementById('quiz-topic').value.trim();
+    const fileInput = document.getElementById('quiz-file');
+    const file = fileInput.files[0];
 
-    if (!topic) {
-        document.getElementById('quiz-container').innerHTML = '<p style="color: #f59e0b;"><i class="fas fa-exclamation-triangle"></i> Please enter a topic for the quiz.</p>';
+    if (!topic && !file) {
+        document.getElementById('quiz-container').innerHTML = '<p style="color: #f59e0b;"><i class="fas fa-exclamation-triangle"></i> Please enter a topic or upload a document for the quiz.</p>';
         return;
     }
 
     showLoading();
 
     try {
-        const response = await fetch(`${API_BASE_URL}/api/quiz/generate`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ topic: topic, count: 5 })
-        });
+        let response;
+
+        if (file) {
+            // Use file-based quiz generation
+            const formData = new FormData();
+            formData.append('document', file);
+            if (topic) {
+                formData.append('topic', topic);
+            }
+            formData.append('count', '5');
+
+            response = await fetch(`${API_BASE_URL}/api/quiz/generate`, {
+                method: 'POST',
+                body: formData
+            });
+        } else {
+            // Use topic-based quiz generation
+            response = await fetch(`${API_BASE_URL}/api/quiz/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ topic: topic, count: 5 })
+            });
+        }
 
         const data = await response.json();
 
@@ -222,7 +242,7 @@ async function generateQuiz() {
             currentQuiz = data.questions;
             displayQuiz();
         } else {
-            document.getElementById('quiz-container').innerHTML = '<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> Failed to generate quiz. Please try again.</p>';
+            document.getElementById('quiz-container').innerHTML = `<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> ${data.error || 'Failed to generate quiz. Please try again.'}</p>`;
         }
     } catch (error) {
         document.getElementById('quiz-container').innerHTML = '<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> Connection error. Please try again.</p>';
@@ -354,6 +374,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // STT file upload label update
     document.getElementById('stt-file').addEventListener('change', function () {
+        const zone = this.closest('.upload-zone');
+        if (this.files[0]) {
+            zone.querySelector('span').textContent = this.files[0].name;
+        }
+    });
+
+    // Quiz file upload label update
+    document.getElementById('quiz-file').addEventListener('change', function () {
         const zone = this.closest('.upload-zone');
         if (this.files[0]) {
             zone.querySelector('span').textContent = this.files[0].name;

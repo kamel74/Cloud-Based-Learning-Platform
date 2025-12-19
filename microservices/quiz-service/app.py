@@ -31,6 +31,24 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
+def extract_text_from_pdf(file_content):
+    """Extract text from PDF using PyPDF2"""
+    try:
+        import io
+        import PyPDF2
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_content))
+        
+        text = ""
+        for page in pdf_reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n\n"
+        
+        return text.strip()
+    except Exception as e:
+        logger.error(f"PDF extraction error: {str(e)}")
+        return ""
+
 def generate_quiz(topic, num_questions=5):
     """Generate quiz questions using Bedrock"""
     try:
@@ -143,22 +161,63 @@ def health():
 
 @app.route('/api/quiz/generate', methods=['POST'])
 def create_quiz():
-    """Generate quiz from topic - synchronous"""
+    """Generate quiz from topic or uploaded document - synchronous"""
     try:
-        data = request.json
-        topic = data.get('topic', data.get('text', ''))
-        num_questions = data.get('count', data.get('num_questions', 5))
+        content_text = ""
+        topic = ""
+        num_questions = 5
         
-        if not topic:
-            return jsonify({'error': 'Topic is required'}), 400
+        # Check if this is a file upload (multipart form data)
+        if request.content_type and 'multipart/form-data' in request.content_type:
+            # Handle file upload
+            file = None
+            if 'document' in request.files:
+                file = request.files['document']
+            elif 'file' in request.files:
+                file = request.files['file']
+            
+            if file and file.filename:
+                # Extract text from file
+                filename = file.filename.lower()
+                file_content = file.read()
+                
+                if filename.endswith('.pdf'):
+                    content_text = extract_text_from_pdf(file_content)
+                elif filename.endswith('.txt'):
+                    content_text = file_content.decode('utf-8', errors='ignore')
+                else:
+                    content_text = file_content.decode('utf-8', errors='ignore')
+                
+                logger.info(f"Extracted {len(content_text)} chars from {filename}")
+            
+            # Get optional topic and count from form data
+            topic = request.form.get('topic', '')
+            num_questions = int(request.form.get('count', 5))
+            
+        else:
+            # Handle JSON request
+            data = request.json or {}
+            topic = data.get('topic', data.get('text', ''))
+            num_questions = data.get('count', data.get('num_questions', 5))
+        
+        # Combine content and topic for quiz generation
+        if content_text and topic:
+            quiz_source = f"Content from document:\n{content_text[:4000]}\n\nFocus on topic: {topic}"
+        elif content_text:
+            quiz_source = f"Content from document:\n{content_text[:5000]}"
+        elif topic:
+            quiz_source = topic
+        else:
+            return jsonify({'error': 'Topic or document is required'}), 400
         
         # Generate quiz synchronously
-        questions = generate_quiz(topic, num_questions)
+        questions = generate_quiz(quiz_source, num_questions)
         
         if questions:
             return jsonify({
                 'message': 'Quiz generated successfully',
-                'questions': questions
+                'questions': questions,
+                'source': 'document' if content_text else 'topic'
             })
         else:
             return jsonify({'error': 'Failed to generate quiz'}), 500

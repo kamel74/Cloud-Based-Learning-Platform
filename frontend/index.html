@@ -240,8 +240,23 @@
 
                 <div class="service-card">
                     <div class="card-header">
+                        <i class="fas fa-file-upload"></i>
+                        <span>Upload Document (Optional)</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-zone" onclick="document.getElementById('quiz-file').click()">
+                            <input type="file" id="quiz-file" accept=".pdf,.doc,.docx,.txt" hidden>
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Click to upload document for quiz</span>
+                            <small>Upload a PDF or TXT to generate quiz from its content</small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="card-header">
                         <i class="fas fa-lightbulb"></i>
-                        <span>Choose a Topic</span>
+                        <span>Enter Topic</span>
                     </div>
                     <div class="card-body">
                         <input type="text" id="quiz-topic"
