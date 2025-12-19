@@ -4,12 +4,12 @@ on:
   push:
     branches: [main]
     paths:
-      - 'microservices/**'
+      - 'cloud project/microservices/**'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
     paths:
-      - 'microservices/**'
+      - 'cloud project/microservices/**'
 
 env:
   AWS_REGION: us-east-1
@@ -35,13 +35,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          cd microservices/${{ matrix.service }}
+          cd "cloud project/microservices/${{ matrix.service }}"
           pip install -r requirements.txt
           pip install pytest pytest-cov
 
       - name: Run unit tests
         run: |
-          cd microservices/${{ matrix.service }}
+          cd "cloud project/microservices/${{ matrix.service }}"
           python -m pytest test_app.py -v --cov=app --cov-report=xml || echo "No tests found, skipping..."
 
   # ==================== BUILD ====================
@@ -71,7 +71,7 @@ jobs:
 
       - name: Build Docker image
         run: |
-          cd microservices/${{ matrix.service }}
+          cd "cloud project/microservices/${{ matrix.service }}"
           docker build -t ${{ env.ECR_REGISTRY }}/learning-platform/${{ matrix.service }}:${{ github.sha }} .
           docker tag ${{ env.ECR_REGISTRY }}/learning-platform/${{ matrix.service }}:${{ github.sha }} \
                      ${{ env.ECR_REGISTRY }}/learning-platform/${{ matrix.service }}:latest

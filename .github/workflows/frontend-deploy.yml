@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'frontend/**'
+      - 'cloud project/frontend/**'
       - '.github/workflows/frontend-deploy.yml'
   workflow_dispatch:
 
@@ -31,7 +31,7 @@ jobs:
       - name: Sync frontend to S3
         run: |
           echo "📤 Uploading frontend files to S3..."
-          aws s3 sync frontend/ s3://${{ env.S3_BUCKET }}/frontend/ \
+          aws s3 sync "cloud project/frontend/" s3://${{ env.S3_BUCKET }}/frontend/ \
             --delete \
             --cache-control "max-age=3600"
           
