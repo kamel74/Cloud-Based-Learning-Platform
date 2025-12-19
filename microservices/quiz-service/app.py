@@ -31,38 +31,47 @@ producer = KafkaProducer(
     value_serializer=lambda v: json.dumps(v).encode('utf-8')
 )
 
-def generate_quiz(text, num_questions=5):
+def generate_quiz(topic, num_questions=5):
     """Generate quiz questions using Bedrock"""
     try:
-        prompt = f"""Based on the following text, generate {num_questions} multiple choice questions.
-        
-Text: {text[:3000]}
+        prompt = f"""Generate {num_questions} multiple choice quiz questions about: {topic}
 
-Generate questions in JSON format:
-[{{"question": "...", "options": ["A", "B", "C", "D"], "correct": "A", "explanation": "..."}}]
+Return ONLY a valid JSON array with this exact format (no other text):
+[{{"question": "What is...?", "options": ["Option A", "Option B", "Option C", "Option D"], "correct": 0}}]
 
-Only respond with valid JSON array."""
+The "correct" field should be the index (0-3) of the correct option.
+Generate educational, clear questions with 4 options each."""
 
         body = json.dumps({
-            "prompt": f"\n\nHuman: {prompt}\n\nAssistant:",
-            "max_tokens_to_sample": 2000,
-            "temperature": 0.5,
+            "inputText": prompt,
+            "textGenerationConfig": {
+                "maxTokenCount": 2000,
+                "temperature": 0.7,
+                "topP": 0.9
+            }
         })
         
         response = bedrock.invoke_model(
-            modelId='anthropic.claude-v2',
+            modelId='amazon.titan-text-express-v1',
             body=body,
             contentType='application/json'
         )
         
         result = json.loads(response['body'].read())
-        completion = result.get('completion', '[]')
+        completion = result.get('results', [{}])[0].get('outputText', '[]')
         
         # Parse JSON from response
         try:
-            questions = json.loads(completion)
-            return questions
+            # Find JSON array in the response
+            start = completion.find('[')
+            end = completion.rfind(']') + 1
+            if start >= 0 and end > start:
+                json_str = completion[start:end]
+                questions = json.loads(json_str)
+                return questions
+            return []
         except:
+            logger.error(f"Failed to parse quiz JSON: {completion[:200]}")
             return []
         
     except Exception as e:
@@ -120,27 +129,25 @@ def health():
 
 @app.route('/api/quiz/generate', methods=['POST'])
 def create_quiz():
-    """Generate quiz from text"""
+    """Generate quiz from topic - synchronous"""
     try:
         data = request.json
-        document_id = data.get('document_id', '')
-        text = data.get('text', '')
-        num_questions = data.get('num_questions', 5)
+        topic = data.get('topic', data.get('text', ''))
+        num_questions = data.get('count', data.get('num_questions', 5))
         
-        if not text:
-            return jsonify({'error': 'Text is required'}), 400
+        if not topic:
+            return jsonify({'error': 'Topic is required'}), 400
         
-        # Publish to Kafka for async processing
-        producer.send('quiz.requested', {
-            'document_id': document_id,
-            'text': text,
-            'num_questions': num_questions
-        })
+        # Generate quiz synchronously
+        questions = generate_quiz(topic, num_questions)
         
-        return jsonify({
-            'message': 'Quiz generation started',
-            'document_id': document_id
-        }), 202
+        if questions:
+            return jsonify({
+                'message': 'Quiz generated successfully',
+                'questions': questions
+            })
+        else:
+            return jsonify({'error': 'Failed to generate quiz'}), 500
         
     except Exception as e:
         logger.error(f"Quiz API error: {str(e)}")
