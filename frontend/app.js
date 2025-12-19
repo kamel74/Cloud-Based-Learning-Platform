@@ -250,15 +250,33 @@ async function readDocument() {
         const data = await response.json();
 
         if (response.ok && (data.text || data.preview)) {
-            showResult('doc-result', `
+            let resultHTML = `
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                     <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.25rem;"></i>
                     <span style="font-weight: 600;">Document Analyzed! (${data.total_characters || 0} characters)</span>
-                </div>
-                <div style="background: #0f172a; padding: 15px; border-radius: 10px; max-height: 300px; overflow-y: auto;">
-                    <pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${data.preview || data.text}</pre>
-                </div>
-            `);
+                </div>`;
+
+            // Show AI Summary if available
+            if (data.summary) {
+                resultHTML += `
+                <div style="margin-bottom: 15px;">
+                    <h4 style="margin-bottom: 10px; color: #3b82f6;"><i class="fas fa-magic"></i> AI Summary</h4>
+                    <div style="background: linear-gradient(135deg, #1e293b 0%, #334155 100%); padding: 15px; border-radius: 10px; border-left: 4px solid #3b82f6;">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${data.summary}</pre>
+                    </div>
+                </div>`;
+            }
+
+            // Show extracted text
+            resultHTML += `
+                <div>
+                    <h4 style="margin-bottom: 10px; color: #94a3b8;"><i class="fas fa-file-alt"></i> Extracted Text</h4>
+                    <div style="background: #0f172a; padding: 15px; border-radius: 10px; max-height: 200px; overflow-y: auto;">
+                        <pre style="white-space: pre-wrap; font-family: inherit; margin: 0; font-size: 0.9rem;">${data.preview || data.text}</pre>
+                    </div>
+                </div>`;
+
+            showResult('doc-result', resultHTML);
         } else {
             showResult('doc-result', `<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> ${data.error || 'Failed to read document'}</p>`, true);
         }
