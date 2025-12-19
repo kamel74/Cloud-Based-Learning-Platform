@@ -39,14 +39,16 @@ async function convertTTS() {
 
         const data = await response.json();
 
-        if (response.ok) {
+        if (response.ok && data.audio) {
+            // Create audio from base64 data
+            const audioSrc = `data:audio/mpeg;base64,${data.audio}`;
             showResult('tts-result', `
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <i class="fas fa-check-circle" style="color: #10b981;"></i>
                     <span>Audio generated successfully!</span>
                 </div>
                 <audio controls style="width: 100%; margin-top: 10px;">
-                    <source src="${data.audio_url || '#'}" type="audio/mpeg">
+                    <source src="${audioSrc}" type="audio/mpeg">
                     Your browser does not support the audio element.
                 </audio>
                 <p style="margin-top: 10px; color: #64748b; font-size: 0.875rem;">

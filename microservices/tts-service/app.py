@@ -85,27 +85,34 @@ def health():
 
 @app.route('/api/tts', methods=['POST'])
 def text_to_speech():
-    """Convert text to speech"""
+    """Convert text to speech synchronously"""
     try:
         data = request.json
         text = data.get('text', '')
-        document_id = data.get('document_id', '')
         voice_id = data.get('voice_id', 'Joanna')
         
         if not text:
             return jsonify({'error': 'Text is required'}), 400
         
-        # Publish to Kafka for async processing
-        producer.send('tts.requested', {
-            'text': text,
-            'document_id': document_id,
-            'voice_id': voice_id
-        })
+        # Generate audio using Polly synchronously
+        response = polly.synthesize_speech(
+            Text=text,
+            OutputFormat='mp3',
+            VoiceId=voice_id
+        )
+        
+        # Read audio stream and encode as base64
+        import base64
+        audio_data = response['AudioStream'].read()
+        audio_base64 = base64.b64encode(audio_data).decode('utf-8')
+        
+        logger.info(f"TTS generated successfully for text: {text[:50]}...")
         
         return jsonify({
-            'message': 'TTS request submitted',
-            'document_id': document_id
-        }), 202
+            'message': 'Audio generated successfully',
+            'audio': audio_base64,
+            'content_type': 'audio/mpeg'
+        })
         
     except Exception as e:
         logger.error(f"TTS API error: {str(e)}")
