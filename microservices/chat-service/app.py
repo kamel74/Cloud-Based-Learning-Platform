@@ -48,7 +48,7 @@ def generate_ai_response(prompt, context=""):
         })
         
         response = bedrock.invoke_model(
-            modelId='amazon.titan-text-lite-v1',
+            modelId='amazon.titan-text-express-v1',
             body=body,
             contentType='application/json'
         )
