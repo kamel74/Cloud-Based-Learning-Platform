@@ -201,15 +201,15 @@ async function readDocument() {
 
         const data = await response.json();
 
-        if (response.ok) {
+        if (response.ok && (data.text || data.preview)) {
             showResult('doc-result', `
                 <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
                     <i class="fas fa-check-circle" style="color: #10b981;"></i>
-                    <span>Document Analyzed!</span>
+                    <span>Document Analyzed! (${data.total_characters || 0} characters)</span>
                 </div>
-                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
-                    <strong>Summary:</strong>
-                    <p style="margin-top: 8px;">${data.summary || data.content}</p>
+                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto;">
+                    <strong>Extracted Text:</strong>
+                    <p style="margin-top: 8px; white-space: pre-wrap;">${data.preview || data.text}</p>
                 </div>
             `);
         } else {
