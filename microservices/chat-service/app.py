@@ -37,24 +37,28 @@ chat_sessions = {}
 def generate_ai_response(prompt, context=""):
     """Generate AI response using Bedrock"""
     try:
+        # Use Amazon Titan which is available by default
         body = json.dumps({
-            "prompt": f"\n\nHuman: {context}\n{prompt}\n\nAssistant:",
-            "max_tokens_to_sample": 500,
-            "temperature": 0.7,
+            "inputText": f"Context: {context}\n\nUser: {prompt}\n\nAssistant:",
+            "textGenerationConfig": {
+                "maxTokenCount": 500,
+                "temperature": 0.7,
+                "topP": 0.9
+            }
         })
         
         response = bedrock.invoke_model(
-            modelId='anthropic.claude-v2',
+            modelId='amazon.titan-text-lite-v1',
             body=body,
             contentType='application/json'
         )
         
         result = json.loads(response['body'].read())
-        return result.get('completion', '')
+        return result.get('results', [{}])[0].get('outputText', 'I could not generate a response.')
         
     except Exception as e:
         logger.error(f"Bedrock error: {str(e)}")
-        return "I'm sorry, I couldn't process your request."
+        return f"AI service error: {str(e)}"
 
 def process_chat_message(message):
     """Process chat message from Kafka"""
