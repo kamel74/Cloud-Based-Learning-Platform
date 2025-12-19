@@ -1,104 +1,44 @@
 """
 Document Reader Service
 Handles PDF/document processing and text extraction
+Uses PyPDF2 for PDF text extraction (no AWS Textract needed)
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from kafka import KafkaProducer, KafkaConsumer
-import boto3
-import json
-import os
-import threading
 import logging
-from io import BytesIO
+import io
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuration
-KAFKA_BROKERS = os.getenv('KAFKA_BROKERS', '10.0.10.10:9092,10.0.10.11:9092,10.0.10.12:9092')
-S3_BUCKET = os.getenv('S3_BUCKET', 'document-reader-storage')
-AWS_REGION = os.getenv('AWS_REGION', 'us-east-1')
-
-# Initialize AWS clients
-textract = boto3.client('textract', region_name=AWS_REGION)
-s3 = boto3.client('s3', region_name=AWS_REGION)
-
-# Kafka Producer
-producer = KafkaProducer(
-    bootstrap_servers=KAFKA_BROKERS.split(','),
-    value_serializer=lambda v: json.dumps(v).encode('utf-8')
-)
-
-def extract_text_from_document(bucket, key):
-    """Extract text from document using Textract"""
+def extract_text_from_pdf(file_content):
+    """Extract text from PDF using PyPDF2"""
     try:
-        response = textract.detect_document_text(
-            Document={
-                'S3Object': {
-                    'Bucket': bucket,
-                    'Name': key
-                }
-            }
-        )
+        import PyPDF2
+        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_content))
         
         text = ""
-        for block in response.get('Blocks', []):
-            if block['BlockType'] == 'LINE':
-                text += block.get('Text', '') + "\n"
+        for page in pdf_reader.pages:
+            page_text = page.extract_text()
+            if page_text:
+                text += page_text + "\n\n"
         
-        return text
-        
+        return text.strip()
     except Exception as e:
-        logger.error(f"Textract error: {str(e)}")
-        return ""
+        logger.error(f"PDF extraction error: {str(e)}")
+        return None
 
-def process_document_upload(message):
-    """Process document upload from Kafka"""
+def extract_text_from_txt(file_content):
+    """Extract text from plain text file"""
     try:
-        data = json.loads(message.value.decode('utf-8'))
-        document_id = data.get('document_id', '')
-        s3_key = data.get('s3_key', '')
-        bucket = data.get('bucket', S3_BUCKET)
-        
-        # Extract text
-        extracted_text = extract_text_from_document(bucket, s3_key)
-        
-        # Save extracted text
-        text_key = f"extracted/{document_id}.txt"
-        s3.put_object(
-            Bucket=S3_BUCKET,
-            Key=text_key,
-            Body=extracted_text.encode('utf-8'),
-            ContentType='text/plain'
-        )
-        
-        # Publish completion event
-        producer.send('document.processed', {
-            'document_id': document_id,
-            'text_url': f"s3://{S3_BUCKET}/{text_key}",
-            'text_preview': extracted_text[:500],
-            'status': 'completed'
-        })
-        
-        logger.info(f"Document processed: {document_id}")
-        
-    except Exception as e:
-        logger.error(f"Document processing error: {str(e)}")
-
-def start_kafka_consumer():
-    """Start Kafka consumer in background"""
-    consumer = KafkaConsumer(
-        'document.uploaded',
-        bootstrap_servers=KAFKA_BROKERS.split(','),
-        group_id='document-reader-group',
-        auto_offset_reset='earliest'
-    )
-    
-    for message in consumer:
-        process_document_upload(message)
+        return file_content.decode('utf-8')
+    except:
+        try:
+            return file_content.decode('latin-1')
+        except:
+            return None
 
 @app.route('/health', methods=['GET'])
 def health():
@@ -106,53 +46,55 @@ def health():
 
 @app.route('/api/documents/upload', methods=['POST'])
 def upload_document():
-    """Upload and process document"""
+    """Upload and process document - extracts text immediately"""
     try:
-        if 'file' not in request.files:
+        # Check for file in different field names
+        file = None
+        if 'document' in request.files:
+            file = request.files['document']
+        elif 'file' in request.files:
+            file = request.files['file']
+        
+        if not file or file.filename == '':
             return jsonify({'error': 'No file provided'}), 400
         
-        file = request.files['file']
-        document_id = request.form.get('document_id', file.filename)
+        filename = file.filename.lower()
+        file_content = file.read()
         
-        # Upload to S3
-        s3_key = f"uploads/{document_id}"
-        s3.upload_fileobj(file, S3_BUCKET, s3_key)
+        logger.info(f"Processing document: {filename}, size: {len(file_content)} bytes")
         
-        # Publish to Kafka
-        producer.send('document.uploaded', {
-            'document_id': document_id,
-            's3_key': s3_key,
-            'bucket': S3_BUCKET
-        })
+        # Extract text based on file type
+        extracted_text = None
         
-        return jsonify({
-            'message': 'Document uploaded successfully',
-            'document_id': document_id
-        }), 202
+        if filename.endswith('.pdf'):
+            extracted_text = extract_text_from_pdf(file_content)
+        elif filename.endswith('.txt'):
+            extracted_text = extract_text_from_txt(file_content)
+        elif filename.endswith(('.doc', '.docx')):
+            # For Word docs, try to read as text or return info
+            extracted_text = f"Word document uploaded: {filename}\nSize: {len(file_content)} bytes\n\nNote: Full Word document parsing requires additional libraries."
+        else:
+            # Try to read as text
+            extracted_text = extract_text_from_txt(file_content)
+        
+        if extracted_text:
+            return jsonify({
+                'message': 'Document processed successfully',
+                'filename': file.filename,
+                'text': extracted_text,
+                'preview': extracted_text[:500] + "..." if len(extracted_text) > 500 else extracted_text,
+                'total_characters': len(extracted_text)
+            })
+        else:
+            return jsonify({
+                'error': 'Could not extract text from document',
+                'filename': file.filename
+            }), 400
         
     except Exception as e:
         logger.error(f"Upload error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/documents/<document_id>', methods=['GET'])
-def get_document(document_id):
-    """Get processed document text"""
-    try:
-        text_key = f"extracted/{document_id}.txt"
-        response = s3.get_object(Bucket=S3_BUCKET, Key=text_key)
-        text = response['Body'].read().decode('utf-8')
-        
-        return jsonify({
-            'document_id': document_id,
-            'text': text
-        })
-        
-    except Exception as e:
-        logger.error(f"Get document error: {str(e)}")
-        return jsonify({'error': 'Document not found'}), 404
-
 if __name__ == '__main__':
-    consumer_thread = threading.Thread(target=start_kafka_consumer, daemon=True)
-    consumer_thread.start()
-    
     app.run(host='0.0.0.0', port=5004)
+
