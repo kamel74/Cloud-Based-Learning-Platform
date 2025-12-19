@@ -26,6 +26,7 @@ function switchPage(pageName) {
     const titles = {
         'dashboard': 'Dashboard',
         'tts': 'Text to Speech',
+        'stt': 'Speech to Text',
         'chat': 'AI Chat',
         'quiz': 'Quiz Generator',
         'documents': 'Document Reader'
@@ -95,6 +96,49 @@ async function convertTTS() {
         }
     } catch (error) {
         showResult('tts-result', `<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> Connection error: ${error.message}</p>`, true);
+    }
+
+    hideLoading();
+}
+
+// ===== Speech to Text =====
+async function convertSTT() {
+    const fileInput = document.getElementById('stt-file');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        showResult('stt-result', '<p style="color: #f59e0b;"><i class="fas fa-exclamation-triangle"></i> Please upload an audio file first.</p>', true);
+        return;
+    }
+
+    showLoading();
+
+    try {
+        const formData = new FormData();
+        formData.append('audio', file);
+
+        const response = await fetch(`${API_BASE_URL}/api/stt`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok && (data.text || data.transcription)) {
+            showResult('stt-result', `
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.25rem;"></i>
+                    <span style="font-weight: 600;">Transcription Complete!</span>
+                </div>
+                <div style="background: #0f172a; padding: 15px; border-radius: 10px;">
+                    <pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${data.text || data.transcription}</pre>
+                </div>
+            `);
+        } else {
+            showResult('stt-result', `<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> ${data.error || 'Failed to transcribe audio'}</p>`, true);
+        }
+    } catch (error) {
+        showResult('stt-result', `<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> Connection error: ${error.message}</p>`, true);
     }
 
     hideLoading();
@@ -302,6 +346,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // File upload label update
     document.getElementById('doc-file').addEventListener('change', function () {
+        const zone = this.closest('.upload-zone');
+        if (this.files[0]) {
+            zone.querySelector('span').textContent = this.files[0].name;
+        }
+    });
+
+    // STT file upload label update
+    document.getElementById('stt-file').addEventListener('change', function () {
         const zone = this.closest('.upload-zone');
         if (this.files[0]) {
             zone.querySelector('span').textContent = this.files[0].name;

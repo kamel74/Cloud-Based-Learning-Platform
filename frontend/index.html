@@ -35,6 +35,10 @@
                     <i class="fas fa-volume-up"></i>
                     <span>Text to Speech</span>
                 </a>
+                <a href="#" class="nav-item" data-page="stt">
+                    <i class="fas fa-microphone"></i>
+                    <span>Speech to Text</span>
+                </a>
                 <a href="#" class="nav-item" data-page="chat">
                     <i class="fas fa-robot"></i>
                     <span>AI Chat</span>
@@ -103,6 +107,14 @@
                         <button class="stat-btn" onclick="switchPage('tts')">Open</button>
                     </div>
                     <div class="stat-card">
+                        <div class="stat-icon stt"><i class="fas fa-microphone"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Speech to Text</span>
+                            <span class="stat-desc">Transcribe audio files</span>
+                        </div>
+                        <button class="stat-btn" onclick="switchPage('stt')">Open</button>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-icon chat"><i class="fas fa-robot"></i></div>
                         <div class="stat-info">
                             <span class="stat-label">AI Chat</span>
@@ -161,6 +173,36 @@
                         </button>
                     </div>
                     <div id="tts-result" class="result-area"></div>
+                </div>
+            </div>
+
+            <!-- STT Page -->
+            <div id="page-stt" class="page">
+                <div class="service-header">
+                    <div class="service-icon-large stt"><i class="fas fa-microphone"></i></div>
+                    <div class="service-info">
+                        <h2>Speech to Text</h2>
+                        <p>Transcribe audio files to text using AWS Transcribe</p>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="card-header">
+                        <i class="fas fa-upload"></i>
+                        <span>Upload Audio File</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-zone" onclick="document.getElementById('stt-file').click()">
+                            <input type="file" id="stt-file" accept="audio/*" hidden>
+                            <i class="fas fa-music"></i>
+                            <span>Click or drag audio file to upload</span>
+                            <small>Supports MP3, WAV, M4A, FLAC</small>
+                        </div>
+                        <button class="btn-primary" onclick="convertSTT()">
+                            <i class="fas fa-file-audio"></i> Transcribe Audio
+                        </button>
+                    </div>
+                    <div id="stt-result" class="result-area"></div>
                 </div>
             </div>
 

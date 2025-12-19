@@ -299,6 +299,10 @@ body {
     background: linear-gradient(135deg, #3b82f6, #60a5fa);
 }
 
+.stat-icon.stt {
+    background: linear-gradient(135deg, #06b6d4, #22d3ee);
+}
+
 .stat-icon.chat {
     background: linear-gradient(135deg, #10b981, #34d399);
 }
@@ -393,6 +397,10 @@ body {
 
 .service-icon-large.tts {
     background: linear-gradient(135deg, #3b82f6, #60a5fa);
+}
+
+.service-icon-large.stt {
+    background: linear-gradient(135deg, #06b6d4, #22d3ee);
 }
 
 .service-icon-large.chat {
