@@ -1,6 +1,45 @@
 // API Base URL - Update this with your ALB DNS
 const API_BASE_URL = 'http://API-Load-Balancer-1954519291.us-east-1.elb.amazonaws.com';
 
+// ===== Page Navigation =====
+function switchPage(pageName) {
+    // Hide all pages
+    document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active');
+    });
+
+    // Show selected page
+    const targetPage = document.getElementById(`page-${pageName}`);
+    if (targetPage) {
+        targetPage.classList.add('active');
+    }
+
+    // Update nav items
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.classList.remove('active');
+        if (item.dataset.page === pageName) {
+            item.classList.add('active');
+        }
+    });
+
+    // Update page title
+    const titles = {
+        'dashboard': 'Dashboard',
+        'tts': 'Text to Speech',
+        'chat': 'AI Chat',
+        'quiz': 'Quiz Generator',
+        'documents': 'Document Reader'
+    };
+    document.getElementById('page-title').textContent = titles[pageName] || 'Dashboard';
+
+    // Close sidebar on mobile
+    document.querySelector('.sidebar').classList.remove('open');
+}
+
+function toggleSidebar() {
+    document.querySelector('.sidebar').classList.toggle('open');
+}
+
 // ===== Utility Functions =====
 function showLoading() {
     document.getElementById('loading-overlay').classList.add('show');
@@ -14,7 +53,7 @@ function showResult(elementId, content, isError = false) {
     const element = document.getElementById(elementId);
     element.innerHTML = content;
     element.classList.add('show');
-    element.style.color = isError ? '#ef4444' : '#ffffff';
+    element.style.color = isError ? '#ef4444' : '#f8fafc';
 }
 
 // ===== Text to Speech =====
@@ -22,7 +61,7 @@ async function convertTTS() {
     const text = document.getElementById('tts-input').value.trim();
 
     if (!text) {
-        showResult('tts-result', '⚠️ Please enter some text to convert.', true);
+        showResult('tts-result', '<p style="color: #f59e0b;"><i class="fas fa-exclamation-triangle"></i> Please enter some text to convert.</p>', true);
         return;
     }
 
@@ -40,86 +79,28 @@ async function convertTTS() {
         const data = await response.json();
 
         if (response.ok && data.audio) {
-            // Create audio from base64 data
             const audioSrc = `data:audio/mpeg;base64,${data.audio}`;
             showResult('tts-result', `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-check-circle" style="color: #10b981;"></i>
-                    <span>Audio generated successfully!</span>
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.25rem;"></i>
+                    <span style="font-weight: 600;">Audio Generated Successfully!</span>
                 </div>
-                <audio controls style="width: 100%; margin-top: 10px;">
+                <audio controls style="width: 100%;">
                     <source src="${audioSrc}" type="audio/mpeg">
                     Your browser does not support the audio element.
                 </audio>
-                <p style="margin-top: 10px; color: #64748b; font-size: 0.875rem;">
-                    ${data.message || 'Text converted to speech successfully.'}
-                </p>
             `);
         } else {
-            showResult('tts-result', `❌ Error: ${data.error || 'Failed to convert text'}`, true);
+            showResult('tts-result', `<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> ${data.error || 'Failed to convert text'}</p>`, true);
         }
     } catch (error) {
-        showResult('tts-result', `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-info-circle" style="color: #0ea5e9;"></i>
-                <span>Demo Mode: Service would convert "${text.substring(0, 50)}..." to speech</span>
-            </div>
-        `);
+        showResult('tts-result', `<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> Connection error: ${error.message}</p>`, true);
     }
 
     hideLoading();
 }
 
-// ===== Speech to Text =====
-async function convertSTT() {
-    const fileInput = document.getElementById('stt-file');
-    const file = fileInput.files[0];
-
-    if (!file) {
-        showResult('stt-result', '⚠️ Please upload an audio file first.', true);
-        return;
-    }
-
-    showLoading();
-
-    try {
-        const formData = new FormData();
-        formData.append('audio', file);
-
-        const response = await fetch(`${API_BASE_URL}/api/stt`, {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (response.ok) {
-            showResult('stt-result', `
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <i class="fas fa-check-circle" style="color: #10b981;"></i>
-                    <span>Transcription Complete!</span>
-                </div>
-                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
-                    <strong>Transcribed Text:</strong>
-                    <p style="margin-top: 8px;">${data.text || data.transcription}</p>
-                </div>
-            `);
-        } else {
-            showResult('stt-result', `❌ Error: ${data.error || 'Failed to transcribe audio'}`, true);
-        }
-    } catch (error) {
-        showResult('stt-result', `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-info-circle" style="color: #0ea5e9;"></i>
-                <span>Demo Mode: Would transcribe "${file.name}"</span>
-            </div>
-        `);
-    }
-
-    hideLoading();
-}
-
-// ===== Chat Assistant =====
+// ===== Chat =====
 const chatMessages = [];
 
 function addChatMessage(message, isUser = false) {
@@ -162,86 +143,21 @@ async function sendChat() {
         if (response.ok) {
             addChatMessage(data.response || data.reply);
         } else {
-            addChatMessage(`Sorry, I encountered an error: ${data.error}`);
+            addChatMessage('Sorry, I could not process your request.');
         }
     } catch (error) {
-        // Demo response
-        const demoResponses = [
-            "That's an interesting question! Let me help you with that.",
-            "I understand what you're asking. Here's what I think...",
-            "Great question! Based on my knowledge...",
-            "Let me explain that for you...",
-            "Here's some information that might help..."
-        ];
-        const randomResponse = demoResponses[Math.floor(Math.random() * demoResponses.length)];
-        addChatMessage(`[Demo Mode] ${randomResponse}`);
+        addChatMessage('Connection error. Please try again.');
     }
-}
-
-// ===== Document Reader =====
-async function readDocument() {
-    const fileInput = document.getElementById('doc-file');
-    const file = fileInput.files[0];
-
-    if (!file) {
-        showResult('doc-result', '⚠️ Please upload a document first.', true);
-        return;
-    }
-
-    showLoading();
-
-    try {
-        const formData = new FormData();
-        formData.append('document', file);
-
-        const response = await fetch(`${API_BASE_URL}/api/documents/upload`, {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (response.ok && (data.text || data.preview)) {
-            showResult('doc-result', `
-                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                    <i class="fas fa-check-circle" style="color: #10b981;"></i>
-                    <span>Document Analyzed! (${data.total_characters || 0} characters)</span>
-                </div>
-                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; max-height: 300px; overflow-y: auto;">
-                    <strong>Extracted Text:</strong>
-                    <p style="margin-top: 8px; white-space: pre-wrap;">${data.preview || data.text}</p>
-                </div>
-            `);
-        } else {
-            showResult('doc-result', `❌ Error: ${data.error || 'Failed to read document'}`, true);
-        }
-    } catch (error) {
-        showResult('doc-result', `
-            <div style="display: flex; align-items: center; gap: 10px;">
-                <i class="fas fa-info-circle" style="color: #0ea5e9;"></i>
-                <span>Demo Mode: Would analyze "${file.name}"</span>
-            </div>
-            <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px; margin-top: 10px;">
-                <strong>File Info:</strong>
-                <p>Name: ${file.name}</p>
-                <p>Size: ${(file.size / 1024).toFixed(2)} KB</p>
-                <p>Type: ${file.type || 'Unknown'}</p>
-            </div>
-        `);
-    }
-
-    hideLoading();
 }
 
 // ===== Quiz Generator =====
 let currentQuiz = [];
-let currentQuestionIndex = 0;
 
 async function generateQuiz() {
     const topic = document.getElementById('quiz-topic').value.trim();
 
     if (!topic) {
-        document.getElementById('quiz-container').innerHTML = '<p style="color: #ef4444;">⚠️ Please enter a topic for the quiz.</p>';
+        document.getElementById('quiz-container').innerHTML = '<p style="color: #f59e0b;"><i class="fas fa-exclamation-triangle"></i> Please enter a topic for the quiz.</p>';
         return;
     }
 
@@ -262,35 +178,13 @@ async function generateQuiz() {
             currentQuiz = data.questions;
             displayQuiz();
         } else {
-            // Demo quiz
-            generateDemoQuiz(topic);
+            document.getElementById('quiz-container').innerHTML = '<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> Failed to generate quiz. Please try again.</p>';
         }
     } catch (error) {
-        generateDemoQuiz(topic);
+        document.getElementById('quiz-container').innerHTML = '<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> Connection error. Please try again.</p>';
     }
 
     hideLoading();
-}
-
-function generateDemoQuiz(topic) {
-    currentQuiz = [
-        {
-            question: `What is the main concept of ${topic}?`,
-            options: ['Option A', 'Option B', 'Option C', 'Option D'],
-            correct: 0
-        },
-        {
-            question: `Which of the following is related to ${topic}?`,
-            options: ['Choice 1', 'Choice 2', 'Choice 3', 'Choice 4'],
-            correct: 1
-        },
-        {
-            question: `How would you describe ${topic}?`,
-            options: ['Description A', 'Description B', 'Description C', 'Description D'],
-            correct: 2
-        }
-    ];
-    displayQuiz();
 }
 
 function displayQuiz() {
@@ -332,36 +226,67 @@ function checkAnswer(questionIndex, optionIndex, element) {
     }
 }
 
+// ===== Document Reader =====
+async function readDocument() {
+    const fileInput = document.getElementById('doc-file');
+    const file = fileInput.files[0];
+
+    if (!file) {
+        showResult('doc-result', '<p style="color: #f59e0b;"><i class="fas fa-exclamation-triangle"></i> Please upload a document first.</p>', true);
+        return;
+    }
+
+    showLoading();
+
+    try {
+        const formData = new FormData();
+        formData.append('document', file);
+
+        const response = await fetch(`${API_BASE_URL}/api/documents/upload`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (response.ok && (data.text || data.preview)) {
+            showResult('doc-result', `
+                <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                    <i class="fas fa-check-circle" style="color: #10b981; font-size: 1.25rem;"></i>
+                    <span style="font-weight: 600;">Document Analyzed! (${data.total_characters || 0} characters)</span>
+                </div>
+                <div style="background: #0f172a; padding: 15px; border-radius: 10px; max-height: 300px; overflow-y: auto;">
+                    <pre style="white-space: pre-wrap; font-family: inherit; margin: 0;">${data.preview || data.text}</pre>
+                </div>
+            `);
+        } else {
+            showResult('doc-result', `<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> ${data.error || 'Failed to read document'}</p>`, true);
+        }
+    } catch (error) {
+        showResult('doc-result', `<p style="color: #ef4444;"><i class="fas fa-times-circle"></i> Connection error: ${error.message}</p>`, true);
+    }
+
+    hideLoading();
+}
+
 // ===== Initialize =====
 document.addEventListener('DOMContentLoaded', () => {
-    // Add initial chat message
-    addChatMessage('Hello! I\'m your AI learning assistant. How can I help you today?');
-
-    // Smooth scroll for navigation
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-        anchor.addEventListener('click', function (e) {
+    // Setup nav click handlers
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
             e.preventDefault();
-            const target = document.querySelector(this.getAttribute('href'));
-            if (target) {
-                target.scrollIntoView({ behavior: 'smooth' });
-            }
+            switchPage(item.dataset.page);
         });
     });
 
-    // Update active nav link on scroll
-    window.addEventListener('scroll', () => {
-        const sections = ['home', 'services', 'about'];
-        const navLinks = document.querySelectorAll('.nav-links a');
+    // Add initial chat message
+    addChatMessage('Hello! I\'m your AI learning assistant powered by AWS Bedrock. How can I help you today?');
 
-        sections.forEach((sectionId, index) => {
-            const section = document.getElementById(sectionId);
-            if (section) {
-                const rect = section.getBoundingClientRect();
-                if (rect.top <= 100 && rect.bottom >= 100) {
-                    navLinks.forEach(link => link.classList.remove('active'));
-                    navLinks[index].classList.add('active');
-                }
-            }
-        });
+    // File upload label update
+    document.getElementById('doc-file').addEventListener('change', function () {
+        const zone = this.closest('.upload-zone');
+        if (this.files[0]) {
+            zone.querySelector('span').textContent = this.files[0].name;
+        }
     });
 });

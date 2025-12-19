@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -8,165 +9,250 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-brand">
-            <i class="fas fa-cloud"></i>
-            <span>Cloud Learning Platform</span>
-        </div>
-        <div class="nav-links">
-            <a href="#home" class="active">Home</a>
-            <a href="#services">Services</a>
-            <a href="#about">About</a>
-        </div>
-    </nav>
-
-    <!-- Hero Section -->
-    <section id="home" class="hero">
-        <div class="hero-content">
-            <h1>Welcome to <span class="gradient-text">Cloud Learning Platform</span></h1>
-            <p>AI-Powered Learning Tools for the Modern Student</p>
-            <div class="hero-buttons">
-                <a href="#services" class="btn btn-primary">Explore Services</a>
-                <a href="#about" class="btn btn-secondary">Learn More</a>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">
+                <i class="fas fa-graduation-cap"></i>
+                <span>LearnAI</span>
             </div>
         </div>
-        <div class="hero-visual">
-            <div class="floating-card card-1"><i class="fas fa-microphone"></i></div>
-            <div class="floating-card card-2"><i class="fas fa-comment-dots"></i></div>
-            <div class="floating-card card-3"><i class="fas fa-file-alt"></i></div>
-            <div class="floating-card card-4"><i class="fas fa-brain"></i></div>
-        </div>
-    </section>
 
-    <!-- Services Section -->
-    <section id="services" class="services">
-        <h2 class="section-title">Our Services</h2>
-        <div class="services-grid">
-            
-            <!-- TTS Service -->
-            <div class="service-card" id="tts-card">
-                <div class="service-icon tts">
+        <nav class="sidebar-nav">
+            <div class="nav-section">
+                <span class="nav-label">Main</span>
+                <a href="#" class="nav-item active" data-page="dashboard">
+                    <i class="fas fa-home"></i>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+
+            <div class="nav-section">
+                <span class="nav-label">AI Services</span>
+                <a href="#" class="nav-item" data-page="tts">
                     <i class="fas fa-volume-up"></i>
+                    <span>Text to Speech</span>
+                </a>
+                <a href="#" class="nav-item" data-page="chat">
+                    <i class="fas fa-robot"></i>
+                    <span>AI Chat</span>
+                </a>
+                <a href="#" class="nav-item" data-page="quiz">
+                    <i class="fas fa-brain"></i>
+                    <span>Quiz Generator</span>
+                </a>
+                <a href="#" class="nav-item" data-page="documents">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Document Reader</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-info">
+                <div class="avatar">
+                    <i class="fas fa-user"></i>
                 </div>
-                <h3>Text to Speech</h3>
-                <p>Convert any text into natural-sounding speech</p>
-                <div class="service-content">
-                    <textarea id="tts-input" placeholder="Enter text to convert to speech..."></textarea>
-                    <button class="btn btn-service" onclick="convertTTS()">
-                        <i class="fas fa-play"></i> Convert
-                    </button>
-                    <div id="tts-result" class="result-box"></div>
+                <div class="user-details">
+                    <span class="user-name">Student</span>
+                    <span class="user-status">Online</span>
                 </div>
             </div>
+        </div>
+    </aside>
 
-            <!-- STT Service -->
-            <div class="service-card" id="stt-card">
-                <div class="service-icon stt">
-                    <i class="fas fa-microphone-alt"></i>
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button class="menu-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h1 class="page-title" id="page-title">Dashboard</h1>
+            </div>
+            <div class="header-right">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="Search...">
                 </div>
-                <h3>Speech to Text</h3>
-                <p>Transcribe audio files into text</p>
-                <div class="service-content">
-                    <div class="file-upload">
-                        <input type="file" id="stt-file" accept="audio/*">
-                        <label for="stt-file">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            <span>Upload Audio File</span>
-                        </label>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <div class="content-area">
+
+            <!-- Dashboard Page -->
+            <div id="page-dashboard" class="page active">
+                <div class="welcome-card">
+                    <div class="welcome-text">
+                        <h2>Welcome to LearnAI Platform! 🚀</h2>
+                        <p>Your AI-powered learning assistant. Choose a service from the sidebar to get started.</p>
                     </div>
-                    <button class="btn btn-service" onclick="convertSTT()">
-                        <i class="fas fa-file-audio"></i> Transcribe
-                    </button>
-                    <div id="stt-result" class="result-box"></div>
+                </div>
+
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon tts"><i class="fas fa-volume-up"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Text to Speech</span>
+                            <span class="stat-desc">Convert text to audio</span>
+                        </div>
+                        <button class="stat-btn" onclick="switchPage('tts')">Open</button>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon chat"><i class="fas fa-robot"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">AI Chat</span>
+                            <span class="stat-desc">Ask anything</span>
+                        </div>
+                        <button class="stat-btn" onclick="switchPage('chat')">Open</button>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon quiz"><i class="fas fa-brain"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Quiz Generator</span>
+                            <span class="stat-desc">Test your knowledge</span>
+                        </div>
+                        <button class="stat-btn" onclick="switchPage('quiz')">Open</button>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon docs"><i class="fas fa-file-alt"></i></div>
+                        <div class="stat-info">
+                            <span class="stat-label">Document Reader</span>
+                            <span class="stat-desc">Extract text from PDFs</span>
+                        </div>
+                        <button class="stat-btn" onclick="switchPage('documents')">Open</button>
+                    </div>
+                </div>
+
+                <div class="tech-info">
+                    <h3>Powered By</h3>
+                    <div class="tech-badges">
+                        <span class="badge"><i class="fab fa-aws"></i> AWS</span>
+                        <span class="badge"><i class="fab fa-docker"></i> Docker</span>
+                        <span class="badge"><i class="fab fa-python"></i> Python</span>
+                        <span class="badge"><i class="fas fa-cloud"></i> Microservices</span>
+                    </div>
                 </div>
             </div>
 
-            <!-- Chat Service -->
-            <div class="service-card" id="chat-card">
-                <div class="service-icon chat">
-                    <i class="fas fa-comments"></i>
+            <!-- TTS Page -->
+            <div id="page-tts" class="page">
+                <div class="service-header">
+                    <div class="service-icon-large tts"><i class="fas fa-volume-up"></i></div>
+                    <div class="service-info">
+                        <h2>Text to Speech</h2>
+                        <p>Convert your text into natural-sounding speech using AWS Polly</p>
+                    </div>
                 </div>
-                <h3>AI Chat Assistant</h3>
-                <p>Get instant answers to your questions</p>
-                <div class="service-content">
-                    <div id="chat-messages" class="chat-box"></div>
-                    <div class="chat-input-container">
-                        <input type="text" id="chat-input" placeholder="Type your message..." onkeypress="handleChatKeypress(event)">
-                        <button class="btn btn-send" onclick="sendChat()">
+
+                <div class="service-card">
+                    <div class="card-header">
+                        <i class="fas fa-keyboard"></i>
+                        <span>Enter Your Text</span>
+                    </div>
+                    <div class="card-body">
+                        <textarea id="tts-input" placeholder="Type or paste your text here..." rows="6"></textarea>
+                        <button class="btn-primary" onclick="convertTTS()">
+                            <i class="fas fa-play"></i> Generate Speech
+                        </button>
+                    </div>
+                    <div id="tts-result" class="result-area"></div>
+                </div>
+            </div>
+
+            <!-- Chat Page -->
+            <div id="page-chat" class="page">
+                <div class="service-header">
+                    <div class="service-icon-large chat"><i class="fas fa-robot"></i></div>
+                    <div class="service-info">
+                        <h2>AI Chat Assistant</h2>
+                        <p>Get instant answers powered by AWS Bedrock AI</p>
+                    </div>
+                </div>
+
+                <div class="chat-container">
+                    <div id="chat-messages" class="chat-messages"></div>
+                    <div class="chat-input-area">
+                        <input type="text" id="chat-input" placeholder="Ask me anything..."
+                            onkeypress="handleChatKeypress(event)">
+                        <button class="btn-send" onclick="sendChat()">
                             <i class="fas fa-paper-plane"></i>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Document Reader Service -->
-            <div class="service-card" id="doc-card">
-                <div class="service-icon doc">
-                    <i class="fas fa-file-pdf"></i>
-                </div>
-                <h3>Document Reader</h3>
-                <p>Extract and analyze content from documents</p>
-                <div class="service-content">
-                    <div class="file-upload">
-                        <input type="file" id="doc-file" accept=".pdf,.doc,.docx,.txt">
-                        <label for="doc-file">
-                            <i class="fas fa-file-upload"></i>
-                            <span>Upload Document</span>
-                        </label>
+            <!-- Quiz Page -->
+            <div id="page-quiz" class="page">
+                <div class="service-header">
+                    <div class="service-icon-large quiz"><i class="fas fa-brain"></i></div>
+                    <div class="service-info">
+                        <h2>Quiz Generator</h2>
+                        <p>Test your knowledge with AI-generated quizzes</p>
                     </div>
-                    <button class="btn btn-service" onclick="readDocument()">
-                        <i class="fas fa-book-reader"></i> Read Document
-                    </button>
-                    <div id="doc-result" class="result-box"></div>
+                </div>
+
+                <div class="service-card">
+                    <div class="card-header">
+                        <i class="fas fa-lightbulb"></i>
+                        <span>Choose a Topic</span>
+                    </div>
+                    <div class="card-body">
+                        <input type="text" id="quiz-topic"
+                            placeholder="Enter a topic (e.g., Python, AWS, Machine Learning)">
+                        <button class="btn-primary" onclick="generateQuiz()">
+                            <i class="fas fa-magic"></i> Generate Quiz
+                        </button>
+                    </div>
+                </div>
+
+                <div id="quiz-container" class="quiz-container"></div>
+            </div>
+
+            <!-- Documents Page -->
+            <div id="page-documents" class="page">
+                <div class="service-header">
+                    <div class="service-icon-large docs"><i class="fas fa-file-alt"></i></div>
+                    <div class="service-info">
+                        <h2>Document Reader</h2>
+                        <p>Extract and analyze text from PDF and text documents</p>
+                    </div>
+                </div>
+
+                <div class="service-card">
+                    <div class="card-header">
+                        <i class="fas fa-upload"></i>
+                        <span>Upload Document</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="upload-zone" onclick="document.getElementById('doc-file').click()">
+                            <input type="file" id="doc-file" accept=".pdf,.doc,.docx,.txt" hidden>
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            <span>Click or drag file to upload</span>
+                            <small>Supports PDF, DOC, DOCX, TXT</small>
+                        </div>
+                        <button class="btn-primary" onclick="readDocument()">
+                            <i class="fas fa-file-alt"></i> Extract Text
+                        </button>
+                    </div>
+                    <div id="doc-result" class="result-area"></div>
                 </div>
             </div>
 
-            <!-- Quiz Service -->
-            <div class="service-card quiz-card" id="quiz-card">
-                <div class="service-icon quiz">
-                    <i class="fas fa-question-circle"></i>
-                </div>
-                <h3>Quiz Generator</h3>
-                <p>Test your knowledge with AI-generated quizzes</p>
-                <div class="service-content">
-                    <input type="text" id="quiz-topic" placeholder="Enter a topic for the quiz...">
-                    <button class="btn btn-service" onclick="generateQuiz()">
-                        <i class="fas fa-magic"></i> Generate Quiz
-                    </button>
-                    <div id="quiz-container" class="quiz-box"></div>
-                </div>
-            </div>
         </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="about" class="about">
-        <div class="about-content">
-            <h2>About This Platform</h2>
-            <p>A modern cloud-based learning platform built with AWS microservices architecture. 
-               Featuring Text-to-Speech, Speech-to-Text, AI Chat, Document Analysis, and Quiz Generation.</p>
-            <div class="tech-stack">
-                <div class="tech-item"><i class="fab fa-aws"></i> AWS</div>
-                <div class="tech-item"><i class="fab fa-docker"></i> Docker</div>
-                <div class="tech-item"><i class="fab fa-python"></i> Python</div>
-                <div class="tech-item"><i class="fas fa-database"></i> PostgreSQL</div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <p>&copy; 2024 Cloud Learning Platform. Built with ❤️ using AWS</p>
-    </footer>
+    </main>
 
     <!-- Loading Overlay -->
     <div id="loading-overlay" class="loading-overlay">
-        <div class="spinner"></div>
-        <p>Processing...</p>
+        <div class="loader"></div>
+        <span>Processing...</span>
     </div>
 
     <script src="app.js"></script>
 </body>
+
 </html>
